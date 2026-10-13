@@ -1,4 +1,5 @@
 package cl.bitss.Coleccion.repository;
+
 import cl.bitss.Coleccion.model.Coleccion;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
