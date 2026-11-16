@@ -1,0 +1,51 @@
+name: Despliegue automatico ci/cd
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  Despliegue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout de codigo
+        uses: actions/checkout@v4
+
+      - name: acceso a AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID }}"
+          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+          aws-region: "${{ secrets.AWS_REGION }}"
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Login en ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: coleccion
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$REGISTRY/$REPO:$IMAGE_TAG"
+          docker build -t "$IMAGE" . && docker push "$IMAGE"
+
+      - name: Despliegue automatico
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: coleccion
+          IMAGE_TAG: ${{ github.sha }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws ssm send-command \
+            --instance-ids "${{ secrets.INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+            \"aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REGISTRY\",
+            \"sudo docker pull $REGISTRY/$REPO:$IMAGE_TAG\",
+            \"sudo docker stop coleccion || true\",
+            \"sudo docker rm coleccion || true\",
+            \"sudo docker run -d --name coleccion -p 8083:8083 $REGISTRY/$REPO:$IMAGE_TAG\"
+            ]"
