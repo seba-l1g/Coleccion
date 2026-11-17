@@ -26,7 +26,7 @@ jobs:
       - name: Build and push ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPO: coleccion
+          REPO: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           IMAGE="$REGISTRY/$REPO:$IMAGE_TAG"
@@ -35,7 +35,7 @@ jobs:
       - name: Despliegue automatico
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPO: coleccion
+          REPO: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
@@ -47,5 +47,5 @@ jobs:
             \"sudo docker pull $REGISTRY/$REPO:$IMAGE_TAG\",
             \"sudo docker stop coleccion || true\",
             \"sudo docker rm coleccion || true\",
-            \"sudo docker run -d --name coleccion -p 8083:8083 $REGISTRY/$REPO:$IMAGE_TAG\"
+            \"sudo docker run -d --name coleccion -p 8086:8086 $REGISTRY/$REPO:$IMAGE_TAG\"
             ]"
